@@ -91,6 +91,17 @@ CLASSES.sort()
 # Initialize the predictor model
 interpreter = None
 
+def load_classifier():
+    global interpreter
+
+    # Load TFLite model
+    interpreter = tf.lite.Interpreter(model_path="models/bird_classifier_no_optz.tflite")
+    interpreter.allocate_tensors()
+
+# Load the classifier as first action of the script, as putting it in the main right before starting Flask server
+# does not seem to be working (maybe the script does not execute sequentially), so the interpreter variable remain None and server breaks 
+load_classifier()
+
 
 @app.route('/')
 def home():
@@ -99,6 +110,7 @@ def home():
 
 @app.route('/', methods=['POST'])
 def upload_image():
+
     img = request.files['image']
 
     ALLOWED_EXTENSIONS = {'png', 'jpeg', 'jpg', 'tiff'}
@@ -126,16 +138,6 @@ def result():
     print("\nOne shot guess: the predicted species is " + species)
 
     return render_template('result.html', species=species)
-
-
-def load_classifier():
-    global interpreter
-
-    # Load TFLite model
-    interpreter = tf.lite.Interpreter(model_path="models/bird_classifier_no_optz.tflite")
-    interpreter.allocate_tensors()
-
-    return
 
 
 def allowed_file(filename, allowed_extensions):
@@ -227,7 +229,7 @@ def compute_probability_distribution(img_preprocessed):
 # ----------------------------------------------- ONLY JSON REQUESTS BELOW ----------------------------------------------
 def compute_probability_distribution_json(img_preprocessed, k=3):
     global interpreter, CLASSES
-    
+
     # Allocate memory for inputs
     input_details = interpreter.get_input_details()
     interpreter.set_tensor(input_details[0]['index'], np.array([img_preprocessed], dtype=np.float32))
@@ -257,6 +259,7 @@ def compute_probability_distribution_json(img_preprocessed, k=3):
 
 @app.route('/bird-prediction', methods=['POST'])
 def predict_bird():
+
     # Get the file from the user request
     if 'file' not in request.files:
         return jsonify({'error': 'No file in request'}), 400  # Bad Request
@@ -284,6 +287,7 @@ def predict_bird():
 
 @app.route('/bird-probabilities-prediction', methods=['POST'])
 def predict_bird_probabilities():
+
     # Get the file from the user request
     if 'file' not in request.files:
         return jsonify({'error': 'No file in request'}), 400  # Bad Request
@@ -310,7 +314,5 @@ def predict_bird_probabilities():
 
 
 if __name__ == '__main__':
-
-    load_classifier()
 
     app.run(debug=False, host="0.0.0.0")
