@@ -7,7 +7,7 @@ import numpy as np
 import json
 from PIL import Image
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='templates')
 
 CLASSES = ['accipiter_gentilis', 'accipiter_nisus', 'acrocephalus_arundinaceus', 'acrocephalus_melanopogon',
            'acrocephalus_palustris', 'acrocephalus_schoenobaenus', 'acrocephalus_scirpaceus', 'actitis_hypoleucos',
