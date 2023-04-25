@@ -1,13 +1,15 @@
-from flask import Flask, render_template, request, redirect, jsonify, url_for
+from flask import Flask, render_template, request, jsonify
 import os
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # suppress tensorflow warnings
 import tensorflow as tf
 import numpy as np
-import json
+from io import BytesIO
+import base64
 from PIL import Image
 
 app = Flask(__name__, static_folder='templates')
+
+ALLOWED_EXTENSIONS = {'png', 'jpeg', 'jpg', 'tiff'}
 
 CLASSES = ['accipiter_gentilis', 'accipiter_nisus', 'acrocephalus_arundinaceus', 'acrocephalus_melanopogon',
            'acrocephalus_palustris', 'acrocephalus_schoenobaenus', 'acrocephalus_scirpaceus', 'actitis_hypoleucos',
@@ -111,33 +113,39 @@ def home():
 @app.route('/', methods=['POST'])
 def upload_image():
 
-    img = request.files['image']
+    img = request.files.get('image')
 
-    ALLOWED_EXTENSIONS = {'png', 'jpeg', 'jpg', 'tiff'}
-    if not allowed_file(img.filename, ALLOWED_EXTENSIONS):
-        return redirect(url_for('result', species="not_able_to_predict"))
-
-    img_preprocessed = image_preprocessing(img)
-    predicted_species = compute_exact_prediction(img_preprocessed)
-    compute_probability_distribution(img_preprocessed)
-
-    if predicted_species == None:
-        return redirect(url_for('result', species="not_able_to_predict"))
-    return redirect(url_for('result', species=predicted_species))
-
-
-@app.route('/result')
-def result():
-    species = request.args.get('species')
-
-    if species == "not_able_to_predict":
+    if not img or not allowed_file(img.filename, ALLOWED_EXTENSIONS):
         return render_template('error.html')
 
-    species = species.replace("_", " ")
-    species = species[0].upper() + species[1:]
-    print("\nOne shot guess: the predicted species is " + species)
+    img_preprocessed = image_preprocessing(img)
 
-    return render_template('result.html', species=species)
+    predicted_species, predicted_confidence = compute_exact_prediction(img_preprocessed)
+    if not predicted_species:
+        return render_template('error.html')
+
+    # Create a PIL Image object from the uploaded image
+    img = Image.open(img)
+
+    # Create a thumbnail of the image with a maximum size of 500 x 500, so that it will be faster to reload it in result.html
+    img.thumbnail((500, 500))
+
+    # Create an in-memory binary stream
+    img_bytes = BytesIO()
+
+    # Save the thumbnail to the in-memory stream in JPEG format
+    img.save(img_bytes, format='JPEG')
+
+    # Set the file pointer at the beginning of the stream
+    img_bytes.seek(0)
+
+    # Encode the image bytes to base64
+    img_base64 = base64.b64encode(img_bytes.getvalue()).decode('utf-8')
+
+    # Capitalize the predicted species
+    predicted_species = predicted_species.replace("_", " ").title()  
+
+    return render_template('result.html', species=predicted_species, confidence=predicted_confidence, image=img_base64)
 
 
 def allowed_file(filename, allowed_extensions):
@@ -167,6 +175,7 @@ def image_preprocessing(image_file):
     elif file_extension in (".tiff", ".tif", ".TIFF", ".TIF"):
         # Load and preprocess TIFF image
         image = Image.open(image_file)
+        img_preprocessed = image.convert('RGB')
         img_preprocessed = image.resize((224, 224))
         img_preprocessed = np.array(img_preprocessed)
         img_preprocessed = tf.keras.applications.efficientnet.preprocess_input(img_preprocessed)
@@ -189,10 +198,12 @@ def compute_exact_prediction(img_preprocessed):
     # Extract output results
     output_details = interpreter.get_output_details()
     output_tensor = interpreter.get_tensor(output_details[0]['index'])
-    predicted_class = np.argmax(output_tensor)
-    label_name = CLASSES[predicted_class]
+    predicted_prob = np.max(output_tensor)
+    predicted_prob = "{:.2f}".format(predicted_prob * 100)    
+    predicted_class_idx = np.argmax(output_tensor)
+    label_name = CLASSES[predicted_class_idx]
 
-    return label_name
+    return label_name, predicted_prob
 
 
 def compute_probability_distribution(img_preprocessed):
@@ -227,6 +238,7 @@ def compute_probability_distribution(img_preprocessed):
 
 
 # ----------------------------------------------- ONLY JSON REQUESTS BELOW ----------------------------------------------
+
 def compute_probability_distribution_json(img_preprocessed, k=3):
     global interpreter, CLASSES
 
