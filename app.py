@@ -7,6 +7,9 @@ from io import BytesIO
 import base64
 from PIL import Image
 
+# import the obj detector class to check whether the submitted image actually contains a bird
+from object_detection.ObjectDetector import ObjectDetector
+
 app = Flask(__name__, static_folder='templates')
 
 ALLOWED_EXTENSIONS = {'png', 'jpeg', 'jpg', 'tiff'}
@@ -90,8 +93,9 @@ CLASSES = ['accipiter_gentilis', 'accipiter_nisus', 'acrocephalus_arundinaceus',
            'vanellus_gregarius', 'vanellus_vanellus', 'xenus_cinereus']
 CLASSES.sort()
 
-# Initialize the predictor model
+# Initialize the predictor model & the object detector as global variables
 interpreter = None
+detector = None
 
 def load_classifier():
     global interpreter
@@ -100,9 +104,17 @@ def load_classifier():
     interpreter = tf.lite.Interpreter(model_path="models/bird_classifier_no_optz.tflite")
     interpreter.allocate_tensors()
 
+def load_detector():
+    global detector
+
+    detector = ObjectDetector()
+    detector.load_model()
+    detector.load_labels()
+    
 # Load the classifier as first action of the script, as putting it in the main right before starting Flask server
 # does not seem to be working (maybe the script does not execute sequentially), so the interpreter variable remain None and server breaks 
 load_classifier()
+load_detector()
 
 
 @app.route('/')
@@ -117,7 +129,19 @@ def upload_image():
 
     if not img or not allowed_file(img.filename, ALLOWED_EXTENSIONS):
         return render_template('error.html')
+    
+    # Firstly, the bird detector checks if the submitted image actually contains a bird
+    image = detector.load_image(img)
+    blob = detector.preprocess_image(image, (416, 416))
+    outputs = detector.get_output(blob)
+    confidence = detector.detect_birds(outputs)
+    if confidence is not None:
+        print("Bird detected! Confidence: " + str(confidence))
+    else:
+        print("No bird detected.")
+        return render_template('error.html')
 
+    # If the bird detector detects a bird inside the submitted image, then proceed with species classification
     img_preprocessed = image_preprocessing(img)
 
     predicted_species, predicted_confidence = compute_exact_prediction(img_preprocessed)
