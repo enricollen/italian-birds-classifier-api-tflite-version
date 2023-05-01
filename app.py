@@ -160,23 +160,16 @@ def image_preprocessing(image_file):
     
     # Load and preprocess image based on file type
     if file_extension in (".jpg", ".jpeg", ".JPG", ".JPEG"):
-        # Load and preprocess JPEG image
+        # Load and preprocess jpg image
         image = Image.open(image_file)
         img_preprocessed = image.resize((224, 224))
         img_preprocessed = np.array(img_preprocessed)
         img_preprocessed = tf.keras.applications.efficientnet.preprocess_input(img_preprocessed)
-    elif file_extension in (".png", ".PNG"):
-        # Load and preprocess PNG image
+    elif file_extension in (".png", ".PNG", ".tiff", ".tif", ".TIFF", ".TIF"):
+        # Load and preprocess png/tiff image
         image = Image.open(image_file)
         img_preprocessed = image.convert('RGB')
         img_preprocessed = img_preprocessed.resize((224, 224))
-        img_preprocessed = np.array(img_preprocessed)
-        img_preprocessed = tf.keras.applications.efficientnet.preprocess_input(img_preprocessed)
-    elif file_extension in (".tiff", ".tif", ".TIFF", ".TIF"):
-        # Load and preprocess TIFF image
-        image = Image.open(image_file)
-        img_preprocessed = image.convert('RGB')
-        img_preprocessed = image.resize((224, 224))
         img_preprocessed = np.array(img_preprocessed)
         img_preprocessed = tf.keras.applications.efficientnet.preprocess_input(img_preprocessed)
     else:
