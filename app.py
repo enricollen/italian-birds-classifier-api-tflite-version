@@ -128,26 +128,24 @@ def upload_image():
     img = request.files.get('image')
 
     if not img or not allowed_file(img.filename, ALLOWED_EXTENSIONS):
-        return render_template('error.html')
+        return render_template('error.html', error_type='file_type_error')
     
     # Firstly, the bird detector checks if the submitted image actually contains a bird
     image = detector.load_image(img)
     blob = detector.preprocess_image(image, (416, 416))
     outputs = detector.get_output(blob)
     confidence = detector.detect_birds(outputs)
-    if confidence is not None:
-        print("Bird detected! Confidence: " + str(confidence))
-    else:
-        print("No bird detected.")
-        return render_template('error.html')
+    if confidence is None:
+        #print("No bird detected.")
+        return render_template('error.html', error_type='no_birds_detected')
 
     # If the bird detector detects a bird inside the submitted image, then proceed with species classification
     img_preprocessed = image_preprocessing(img)
 
     predicted_species, predicted_confidence = compute_exact_prediction(img_preprocessed)
     if not predicted_species:
-        return render_template('error.html')
-
+        return render_template('error.html', error_type='prediction_error')
+    
     # Create a PIL Image object from the uploaded image
     img = Image.open(img)
 

@@ -11,7 +11,7 @@
             padding: 0;
         }
         header {
-            background-color: #333;
+            background-color: #9c2626;
             color: #fff;
             padding: 20px;
             text-align: center;
@@ -30,7 +30,7 @@
             text-align: center;
         }
         button {
-            background-color: #4CAF50;
+            background-color: #157df3;
             border: none;
             color: #fff;
             cursor: pointer;
@@ -38,7 +38,7 @@
             padding: 10px 20px;
         }
         button:hover {
-            background-color: #3e8e41;
+            background-color: #3e718e;
         }
         @media only screen and (max-width: 600px) {
             header {
@@ -60,14 +60,20 @@
 <body>
 
     <header>
-        <h1>Error</h1>
+        <h1>Errore</h1>
     </header>
 
     <main>
-        <p>An error occurred during prediction of the bird species.</p>
-        <p>Please try uploading another image in one of the following formats: jpg, jpeg, png, tiff.</p>
+        {% if error_type == 'file_type_error' %}
+            <p>Il file caricato non &egrave; in uno dei seguenti formati: jpg, jpeg, png, tiff.</p>
+        {% elif error_type == 'no_birds_detected' %}
+            <p>Non sono stati rilevati volatili nell&apos;immagine, riprovare con una nuova foto.</p>
+        {% else %}
+            <p>Si &egrave; verificato un errore durante la predizione della specie, riprovare con un immagine differente.</p>
+        {% endif %}
+        
         <form method="GET" action="/">
-            <button type="submit">Return to Home Page</button>
+            <button type="submit">&#8592 Torna alla Home Page</button>
         </form>
     </main>
 
