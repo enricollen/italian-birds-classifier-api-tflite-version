@@ -1,6 +1,6 @@
 # italian-birds-classifier-api-tflite-version
 version which exploits the tf-lite model inference, tailored for edge devices [e.g., raspberry pi]
-main version: https://github.com/enricollen/italian-birds-classifier-api
+<!--main version: https://github.com/enricollen/italian-birds-classifier-api-->
 
 A simple python Flask API which predicts the bird species (Note: italian species only) given an image.
 
@@ -10,4 +10,4 @@ Please try to upload images of birds which are as meaningful as possibile, witho
 
 The model particularly suffers from missclassification when it has to predict between birds which are very similar, e.g., same species and different family, or between male/female across different species.
 
-
+Live Demo: [Here](http://italianbirds.duckdns.org:5000/)
